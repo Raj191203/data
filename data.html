@@ -1,0 +1,109 @@
+<html>
+<head>
+  <title>Stock Data Visualization</title>
+  <!-- Include the Chart.js library -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <canvas id="stockGraph" width="400" height="200"></canvas>
+  <button onclick="startStreaming()">Start Streaming Data</button>
+
+  <script>
+    // Global variable to store the chart object
+    let stockChart;
+
+    // Array to store received data points
+    let dataPoints = [];
+
+    // Function to fetch stock data from the server
+    function fetchData() {
+      // Replace 'your_server_endpoint' with the actual API endpoint on your server
+      fetch('your_server_endpoint')
+        .then(response => response.json())
+        .then(data => {
+          // Check for duplicated data and update the chart
+          data.forEach(newDataPoint => {
+            const existingDataPointIndex = dataPoints.findIndex(
+              point => point.x === newDataPoint.x
+            );
+            if (existingDataPointIndex !== -1) {
+              dataPoints[existingDataPointIndex] = newDataPoint;
+            } else {
+              dataPoints.push(newDataPoint);
+            }
+          });
+
+          updateChart(); // Update the chart with the new data points
+        })
+        .catch(error => console.error('Error fetching stock data:', error));
+    }
+
+    // Function to continuously fetch data at regular intervals
+    let dataInterval;
+    function startStreaming() {
+      if (!dataInterval) {
+        dataInterval = setInterval(fetchData, 5000); // Fetch data every 5 seconds (adjust the interval as needed)
+      }
+    }
+
+    // Function to stop data streaming
+    function stopStreaming() {
+      if (dataInterval) {
+        clearInterval(dataInterval);
+        dataInterval = null;
+      }
+    }
+
+    // Function to update the chart with the data points
+    function updateChart() {
+      // Sort the data points based on timestamp
+      dataPoints.sort((a, b) => a.x - b.x);
+
+      // Extract x and y values for the Chart.js dataset
+      const chartData = {
+        labels: dataPoints.map(point => new Date(point.x).toLocaleTimeString()),
+        datasets: [{
+          label: 'Stock Price',
+          data: dataPoints.map(point => point.y),
+          borderColor: 'blue',
+          borderWidth: 1,
+          fill: false
+        }]
+      };
+
+      if (!stockChart) {
+        // Create the Chart.js line graph
+        const ctx = document.getElementById('stockGraph').getContext('2d');
+        stockChart = new Chart(ctx, {
+          type: 'line',
+          data: chartData,
+          options: {
+            responsive: false,
+            scales: {
+              x: {
+                type: 'time',
+                time: {
+                  unit: 'second',
+                  displayFormats: {
+                    second: 'h:mm:ss a'
+                  }
+                }
+              },
+              y: {
+                title: {
+                  display: true,
+                  text: 'Top Ask Price'
+                }
+              }
+            }
+          }
+        });
+      } else {
+        // Update the existing chart with new data
+        stockChart.data = chartData;
+        stockChart.update();
+      }
+    }
+  </script>
+</body>
+</html>
